@@ -3,3 +3,5 @@ whitelist.zok
 abi.json
 out
 out.r1cs
+proving.key
+verification.key
