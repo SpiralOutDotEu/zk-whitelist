@@ -1,6 +1,7 @@
-use std::io::{self,  Write};
-use std::path::Path;
 use std::fs::File;
+use std::io::{self, Write};
+use std::path::Path;
+use std::process::Command;
 
 fn main() -> io::Result<()> {
     // Check if `whitelist.zok` exists, if not create it
@@ -16,5 +17,13 @@ def main(private field a, private field b, public field c, public field d) -> bo
 "#;
         File::create("whitelist.zok")?.write_all(contents.as_bytes())?;
     }
+
+    // Compile the program
+    let output = Command::new("zokrates")
+        .arg("compile")
+        .arg("-i")
+        .arg("whitelist.zok")
+        .output()?;
+    assert!(output.status.success());
     Ok(())
 }
