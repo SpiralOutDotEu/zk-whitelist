@@ -1,2 +1,5 @@
 /target
 whitelist.zok
+abi.json
+out
+out.r1cs
