@@ -25,5 +25,10 @@ def main(private field a, private field b, public field c, public field d) -> bo
         .arg("whitelist.zok")
         .output()?;
     assert!(output.status.success());
+
+    // Perform the setup phase
+    let output = Command::new("zokrates").arg("setup").output()?;
+    assert!(output.status.success());
+
     Ok(())
 }
