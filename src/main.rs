@@ -65,6 +65,32 @@ fn parse_proof_and_input() -> Result<(Proof, Vec<String>), Box<dyn Error>> {
     Ok((proof_file.proof, proof_file.inputs))
 }
 
+fn process_addresses(address: String, all_data: &mut HashMap<String, serde_json::Value>) -> Result<(), io::Error> {
+    let decimal = BigUint::from_str_radix(&address[2..], 16).unwrap();
+    let decimal_str = decimal.to_string();
+    let mid = decimal_str.len() / 2;
+    let (a, b) = decimal_str.split_at(mid);
+    let (c, d) = (a.to_string(), b.to_string());
+    run_command("zokrates", &["compute-witness", "-a", &a, &b, &c, &d])?;
+    run_command("zokrates", &["generate-proof"])?;
+    Ok(match parse_proof_and_input() {
+        Ok((proof, input)) => {
+            all_data.insert(
+                address.clone(),
+                serde_json::json!({
+                    "proof": [
+                        proof.a,
+                        proof.b,
+                        proof.c
+                    ],
+                    "inputs": input
+                }),
+            );
+        }
+        Err(e) => eprintln!("Failed to parse proof and input: {}", e),
+    })
+}
+
 fn main() -> io::Result<()> {
     generate_zok_file()?;
 
@@ -82,33 +108,7 @@ fn main() -> io::Result<()> {
     // Loop through each line in addresses.txt
     for line in reader.lines() {
         let address = line?;
-        // Remove the "0x" prefix and parse the hex string as a U512
-        let decimal = BigUint::from_str_radix(&address[2..], 16).unwrap();
-        let decimal_str = decimal.to_string();
-        let mid = decimal_str.len() / 2;
-        let (a, b) = decimal_str.split_at(mid);
-        let (c, d) = (a.to_string(), b.to_string());
-
-        run_command("zokrates", &["compute-witness", "-a", &a, &b, &c, &d])?;
-        run_command("zokrates", &["generate-proof"])?;
-
-        // Parse the proof and input from proof.json
-        match parse_proof_and_input() {
-            Ok((proof, input)) => {
-                all_data.insert(
-                    address.clone(),
-                    serde_json::json!({
-                        "proof": [
-                            proof.a,
-                            proof.b,
-                            proof.c
-                        ],
-                        "inputs": input
-                    }),
-                );
-            }
-            Err(e) => eprintln!("Failed to parse proof and input: {}", e),
-        }
+        process_addresses(address, &mut all_data)?;
     }
 
     // Open the address-proof.json file for writing
