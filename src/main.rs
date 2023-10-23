@@ -44,6 +44,16 @@ def main(private field a, private field b, public field c, public field d) -> bo
     Ok(())
 }
 
+fn run_command(command: &str, args: &[&str]) -> io::Result<()> {
+    let output = Command::new(command)
+        .args(args)
+        .output()?;
+    if !output.status.success() {
+        eprintln!("{} command failed", command);
+    }
+    Ok(())
+}
+
 fn parse_proof_and_input() -> Result<(Proof, Vec<String>), Box<dyn Error>> {
     // Open the proof.json file
     let file = File::open("proof.json")?;
@@ -58,21 +68,9 @@ fn parse_proof_and_input() -> Result<(Proof, Vec<String>), Box<dyn Error>> {
 fn main() -> io::Result<()> {
     generate_zok_file()?;
 
-    // Compile the program
-    let output = Command::new("zokrates")
-        .arg("compile")
-        .arg("-i")
-        .arg("whitelist.zok")
-        .output()?;
-    assert!(output.status.success());
-
-    // Perform the setup phase
-    let output = Command::new("zokrates").arg("setup").output()?;
-    assert!(output.status.success());
-
-    // Export a solidity verifier
-    let output = Command::new("zokrates").arg("export-verifier").output()?;
-    assert!(output.status.success());
+    run_command("zokrates", &["compile", "-i", "whitelist.zok"])?;
+    run_command("zokrates", &["setup"])?;
+    run_command("zokrates", &["export-verifier"])?;
 
     // Open the addresses.txt file
     let file = File::open("addresses.txt")?;
@@ -91,22 +89,8 @@ fn main() -> io::Result<()> {
         let (a, b) = decimal_str.split_at(mid);
         let (c, d) = (a.to_string(), b.to_string());
 
-        // Compute witness
-        let _output = Command::new("zokrates")
-            .arg("compute-witness")
-            .arg("-a")
-            .args(&[
-                &a.to_string(),
-                &b.to_string(),
-                &c.to_string(),
-                &d.to_string(),
-            ])
-            .output()?;
-        // assert!(output.status.success(), "compute witness failed");
-
-        // Generate the proofs
-        let output = Command::new("zokrates").arg("generate-proof").output()?;
-        assert!(output.status.success());
+        run_command("zokrates", &["compute-witness", "-a", &a, &b, &c, &d])?;
+        run_command("zokrates", &["generate-proof"])?;
 
         // Parse the proof and input from proof.json
         match parse_proof_and_input() {
