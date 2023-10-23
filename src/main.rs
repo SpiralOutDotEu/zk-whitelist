@@ -1,9 +1,5 @@
-use std::collections::HashMap;
-use std::error::Error;
-use std::fs::{File, OpenOptions};
-use std::io::{self, BufRead, BufReader, Write};
-use std::path::Path;
-use std::process::Command;
+use std::{error::Error, collections::HashMap};
+use std::{fs::{File, OpenOptions}, io::{self, BufRead, BufReader, Write}, path::Path, process::Command};
 extern crate serde;
 extern crate serde_json;
 #[macro_use]
