@@ -1,5 +1,10 @@
-use std::{error::Error, collections::HashMap};
-use std::{fs::{File, OpenOptions}, io::{self, BufRead, BufReader, Write}, path::Path, process::Command};
+use std::{collections::HashMap, error::Error};
+use std::{
+    fs::{File, OpenOptions},
+    io::{self, BufRead, BufReader, Write},
+    path::Path,
+    process::Command,
+};
 extern crate serde;
 extern crate serde_json;
 #[macro_use]
@@ -25,6 +30,20 @@ struct ProofFile {
     inputs: Vec<String>,
 }
 
+fn generate_zok_file() -> io::Result<()> {
+    if !Path::new("whitelist.zok").exists() {
+        let contents = r#"
+def main(private field a, private field b, public field c, public field d) -> bool{
+    assert(a == c);
+    assert(b == d);
+    return true;
+}
+"#;
+        File::create("whitelist.zok")?.write_all(contents.as_bytes())?;
+    }
+    Ok(())
+}
+
 fn parse_proof_and_input() -> Result<(Proof, Vec<String>), Box<dyn Error>> {
     // Open the proof.json file
     let file = File::open("proof.json")?;
@@ -37,17 +56,7 @@ fn parse_proof_and_input() -> Result<(Proof, Vec<String>), Box<dyn Error>> {
 }
 
 fn main() -> io::Result<()> {
-    // Check if `whitelist.zok` exists, if not create it
-    if !Path::new("whitelist.zok").exists() {
-        let contents = r#"
-def main(private field a, private field b, public field c, public field d) -> bool{
-    assert(a == c);
-    assert(b == d);
-    return true;
-}
-"#;
-        File::create("whitelist.zok")?.write_all(contents.as_bytes())?;
-    }
+    generate_zok_file()?;
 
     // Compile the program
     let output = Command::new("zokrates")
@@ -84,13 +93,18 @@ def main(private field a, private field b, public field c, public field d) -> bo
 
         // Compute witness
         let _output = Command::new("zokrates")
-        .arg("compute-witness")
-        .arg("-a")
-        .args(&[&a.to_string(), &b.to_string(), &c.to_string(), &d.to_string()])
-        .output()?;
+            .arg("compute-witness")
+            .arg("-a")
+            .args(&[
+                &a.to_string(),
+                &b.to_string(),
+                &c.to_string(),
+                &d.to_string(),
+            ])
+            .output()?;
         // assert!(output.status.success(), "compute witness failed");
 
-          // Generate the proofs
+        // Generate the proofs
         let output = Command::new("zokrates").arg("generate-proof").output()?;
         assert!(output.status.success());
 
