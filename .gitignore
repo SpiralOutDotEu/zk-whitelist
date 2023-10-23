@@ -7,3 +7,7 @@ proving.key
 verification.key
 verifier.sol
 addresses.txt
+out.wtns
+proof.json
+witness
+address-proof.json
