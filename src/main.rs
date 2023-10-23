@@ -49,7 +49,8 @@ fn run_command(command: &str, args: &[&str]) -> io::Result<()> {
         .args(args)
         .output()?;
     if !output.status.success() {
-        eprintln!("{} command failed", command);
+        let args_str = args.join(" ");
+        eprintln!("Command '{}' with arguments '{}' failed", command, args_str);
     }
     Ok(())
 }
@@ -65,13 +66,30 @@ fn parse_proof_and_input() -> Result<(Proof, Vec<String>), Box<dyn Error>> {
     Ok((proof_file.proof, proof_file.inputs))
 }
 
-fn process_addresses(address: String, all_data: &mut HashMap<String, serde_json::Value>) -> Result<(), io::Error> {
+fn remove_leading_zeros(s: &str) -> &str {
+    s.trim_start_matches('0')
+}
+
+fn process_addresses(
+    address: String,
+    all_data: &mut HashMap<String, serde_json::Value>,
+) -> Result<(), io::Error> {
     let decimal = BigUint::from_str_radix(&address[2..], 16).unwrap();
     let decimal_str = decimal.to_string();
     let mid = decimal_str.len() / 2;
     let (a, b) = decimal_str.split_at(mid);
     let (c, d) = (a.to_string(), b.to_string());
-    run_command("zokrates", &["compute-witness", "-a", &a, &b, &c, &d])?;
+    run_command(
+        "zokrates",
+        &[
+            "compute-witness",
+            "-a",
+            &remove_leading_zeros(&a.to_string()),
+            &remove_leading_zeros(&b.to_string()),
+            &remove_leading_zeros(&c.to_string()),
+            &remove_leading_zeros(&d.to_string()),
+        ],
+    )?;
     run_command("zokrates", &["generate-proof"])?;
     Ok(match parse_proof_and_input() {
         Ok((proof, input)) => {
