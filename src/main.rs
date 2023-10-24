@@ -2,9 +2,9 @@
 use std::{collections::HashMap, error::Error};
 use std::{
     fs::{File, OpenOptions},
-    io::{self, BufRead, BufReader, Write},
+    io::{self, BufRead, BufReader, ErrorKind, Write},
     path::Path,
-    process::Command,
+    process::{Command, Output},
 };
 // Extern crate declarations for using external libraries
 extern crate serde;
@@ -91,17 +91,18 @@ def main(private field a, private field b, public field c, public field d) -> bo
 }
 
 // Function to run a shell command with given arguments
-fn run_command(command: &str, args: &[&str]) -> io::Result<()> {
+fn run_command(command: &str, args: &[&str]) -> io::Result<Output> {
     let output = Command::new(command).args(args).output()?;
     if !output.status.success() {
         let args_str = args.join(" ");
-        eprintln!("Command '{}' with arguments '{}' failed", command, args_str);
+        let error_message = format!("Command '{}' with arguments '{}' failed", command, args_str);
+        return Err(io::Error::new(ErrorKind::Other, error_message));
     }
-    Ok(())
+    Ok(output)
 }
 
 // Function to parse proof and input from proof.json file that ZoKrates produces
-fn parse_proof_and_input() -> Result<(Proof, Vec<String>), Box<dyn Error>> {
+fn parse_proof_json_file() -> Result<(Proof, Vec<String>), Box<dyn Error>> {
     // Open the proof.json file
     let file = File::open("proof.json")?;
     let reader = BufReader::new(file);
@@ -134,10 +135,10 @@ fn process_addresses(
     // Convert the hexadecimal address to a decimal BigUint
     let decimal = BigUint::from_str_radix(&address[2..], 16).unwrap();
     let decimal_str = decimal.to_string();
-    
+
     // Find the midpoint of the decimal string
     let mid = decimal_str.len() / 2;
-    
+
     // Split the decimal string into two halves and duplicate them
     let (a, b) = decimal_str.split_at(mid);
     let (c, d) = (a.to_string(), b.to_string());
@@ -160,7 +161,7 @@ fn process_addresses(
     run_command("zokrates", &["generate-proof"])?;
 
     // Parse the generated proof and inputs
-    Ok(match parse_proof_and_input() {
+    Ok(match parse_proof_json_file() {
         Ok((proof, input)) => {
             all_data.insert(
                 address.clone(),
@@ -176,4 +177,57 @@ fn process_addresses(
         }
         Err(e) => eprintln!("Failed to parse proof and input: {}", e),
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+
+    #[test]
+    fn test_generate_zok_file() {
+        let result = generate_zok_file();
+        assert!(result.is_ok());
+        assert!(Path::new("whitelist.zok").exists());
+    }
+
+    #[test]
+    fn test_parse_proof_json_file() {
+        // Create a sample proof.json file
+        let sample_proof = r#"{
+            "scheme": "G16",
+            "curve": "Bn128",
+            "proof": {
+                "a": ["0x1", "0x2"],
+                "b": [["0x3", "0x4"], ["0x5", "0x6"]],
+                "c": ["0x7", "0x8"]
+            },
+            "inputs": ["0x9", "0xA"]
+        }"#;
+        fs::write("proof.json", sample_proof).expect("Unable to write file");
+
+        let result = parse_proof_json_file();
+        assert!(result.is_ok());
+
+        let (proof, inputs) = result.unwrap();
+        assert_eq!(proof.a, vec!["0x1", "0x2"]);
+        assert_eq!(proof.b, vec![vec!["0x3", "0x4"], vec!["0x5", "0x6"]]);
+        assert_eq!(proof.c, vec!["0x7", "0x8"]);
+        assert_eq!(inputs, vec!["0x9", "0xA"]);
+    }
+
+    #[test]
+    fn test_remove_leading_zeros() {
+        let input = "000123456";
+        let result = remove_leading_zeros(input);
+        assert_eq!(result, "123456");
+    }
+
+    #[test]
+    fn test_run_command() {
+        let result = run_command("echo", &["Hello, world!"]);
+        assert!(result.is_ok());
+        let output = result.unwrap();
+        assert_eq!(String::from_utf8_lossy(&output.stdout), "Hello, world!\n");
+    }
 }
