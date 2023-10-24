@@ -2,9 +2,9 @@
 use std::{collections::HashMap, error::Error};
 use std::{
     fs::{File, OpenOptions},
-    io::{self, BufRead, BufReader, Write},
+    io::{self, BufRead, BufReader, ErrorKind, Write},
     path::Path,
-    process::Command,
+    process::{Command, Output},
 };
 // Extern crate declarations for using external libraries
 extern crate serde;
@@ -91,13 +91,14 @@ def main(private field a, private field b, public field c, public field d) -> bo
 }
 
 // Function to run a shell command with given arguments
-fn run_command(command: &str, args: &[&str]) -> io::Result<()> {
+fn run_command(command: &str, args: &[&str]) -> io::Result<Output> {
     let output = Command::new(command).args(args).output()?;
     if !output.status.success() {
         let args_str = args.join(" ");
-        eprintln!("Command '{}' with arguments '{}' failed", command, args_str);
+        let error_message = format!("Command '{}' with arguments '{}' failed", command, args_str);
+        return Err(io::Error::new(ErrorKind::Other, error_message));
     }
-    Ok(())
+    Ok(output)
 }
 
 // Function to parse proof and input from proof.json file that ZoKrates produces
