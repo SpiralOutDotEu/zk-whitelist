@@ -181,11 +181,37 @@ fn process_addresses(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::fs;
 
     #[test]
     fn test_generate_zok_file() {
         let result = generate_zok_file();
         assert!(result.is_ok());
         assert!(Path::new("whitelist.zok").exists());
+    }
+
+    #[test]
+    fn test_parse_proof_and_input() {
+        // Create a sample proof.json file
+        let sample_proof = r#"{
+            "scheme": "G16",
+            "curve": "Bn128",
+            "proof": {
+                "a": ["0x1", "0x2"],
+                "b": [["0x3", "0x4"], ["0x5", "0x6"]],
+                "c": ["0x7", "0x8"]
+            },
+            "inputs": ["0x9", "0xA"]
+        }"#;
+        fs::write("proof.json", sample_proof).expect("Unable to write file");
+
+        let result = parse_proof_and_input();
+        assert!(result.is_ok());
+
+        let (proof, inputs) = result.unwrap();
+        assert_eq!(proof.a, vec!["0x1", "0x2"]);
+        assert_eq!(proof.b, vec![vec!["0x3", "0x4"], vec!["0x5", "0x6"]]);
+        assert_eq!(proof.c, vec!["0x7", "0x8"]);
+        assert_eq!(inputs, vec!["0x9", "0xA"]);
     }
 }
