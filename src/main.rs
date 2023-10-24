@@ -101,7 +101,7 @@ fn run_command(command: &str, args: &[&str]) -> io::Result<()> {
 }
 
 // Function to parse proof and input from proof.json file that ZoKrates produces
-fn parse_proof_and_input() -> Result<(Proof, Vec<String>), Box<dyn Error>> {
+fn parse_proof_json_file() -> Result<(Proof, Vec<String>), Box<dyn Error>> {
     // Open the proof.json file
     let file = File::open("proof.json")?;
     let reader = BufReader::new(file);
@@ -160,7 +160,7 @@ fn process_addresses(
     run_command("zokrates", &["generate-proof"])?;
 
     // Parse the generated proof and inputs
-    Ok(match parse_proof_and_input() {
+    Ok(match parse_proof_json_file() {
         Ok((proof, input)) => {
             all_data.insert(
                 address.clone(),
@@ -191,7 +191,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_proof_and_input() {
+    fn test_parse_proof_json_file() {
         // Create a sample proof.json file
         let sample_proof = r#"{
             "scheme": "G16",
@@ -205,7 +205,7 @@ mod tests {
         }"#;
         fs::write("proof.json", sample_proof).expect("Unable to write file");
 
-        let result = parse_proof_and_input();
+        let result = parse_proof_json_file();
         assert!(result.is_ok());
 
         let (proof, inputs) = result.unwrap();
