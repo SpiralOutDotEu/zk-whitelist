@@ -47,13 +47,17 @@ cargo run
 
 5. **Smart Contract Deployment:**
 
-* Deploy the `verifier.sol`` using your preferred Ethereum development environment (e.g., Remix, Hardhat, Truffle, Forge etc.).
+* Deploy the `verifier.sol` using your preferred Ethereum development environment (e.g., Remix, Hardhat, Truffle, Forge etc.).
+
 * Utilize the provided example token contract to integrate the verifier and utilize the address proofs from `address-proof.json` for minting tokens.
+
+ * The `verifier.sol` and the `address-proof.json` should be from the same run of the program. At every setup run, ZoKrates produces new `toxic waste` to `secure the setup` so in every run the two files should be used in pair.
 
 6. **Example Usage:**
 
-* In the provided example token contract, the mint function accepts Zero-Knowledge proof and inputs to mint tokens to whitelisted addresses.
-* The mint function ensures that the Ethereum address invoking the function matches the Ethereum address in the Zero-Knowledge proof, and that tokens haven't been claimed by that address before.
+* In the provided [example](https://github.com/SpiralOutDotEu/zk-whitelist/tree/master/examples) token [contract](https://github.com/SpiralOutDotEu/zk-whitelist/blob/master/examples/zkToken.sol), the mint function accepts Zero-Knowledge proof and inputs to mint tokens to whitelisted addresses.
+
+* The [mint](https://github.com/SpiralOutDotEu/zk-whitelist/blob/a037d53abb141166ac2659c0a5f90b778c99958f/examples/zkToken.sol#L25) function ensures that the Ethereum address invoking the function matches the Ethereum address in the Zero-Knowledge proof, and that tokens haven't been claimed by that address before.
 * If the verification succeeds, tokens are minted to the Ethereum address, marking the address as claimed to prevent double-minting.
 
 # Note
