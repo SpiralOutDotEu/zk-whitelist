@@ -134,10 +134,10 @@ fn process_addresses(
     // Convert the hexadecimal address to a decimal BigUint
     let decimal = BigUint::from_str_radix(&address[2..], 16).unwrap();
     let decimal_str = decimal.to_string();
-    
+
     // Find the midpoint of the decimal string
     let mid = decimal_str.len() / 2;
-    
+
     // Split the decimal string into two halves and duplicate them
     let (a, b) = decimal_str.split_at(mid);
     let (c, d) = (a.to_string(), b.to_string());
@@ -176,4 +176,16 @@ fn process_addresses(
         }
         Err(e) => eprintln!("Failed to parse proof and input: {}", e),
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_generate_zok_file() {
+        let result = generate_zok_file();
+        assert!(result.is_ok());
+        assert!(Path::new("whitelist.zok").exists());
+    }
 }
