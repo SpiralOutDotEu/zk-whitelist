@@ -1,3 +1,4 @@
+// Importing necessary libraries and modules
 use std::{collections::HashMap, error::Error};
 use std::{
     fs::{File, OpenOptions},
@@ -5,6 +6,7 @@ use std::{
     path::Path,
     process::Command,
 };
+// Extern crate declarations for using external libraries
 extern crate serde;
 extern crate serde_json;
 #[macro_use]
@@ -14,7 +16,7 @@ extern crate num_traits;
 
 use num_bigint::BigUint;
 use num_traits::Num;
-
+// Struct definitions for Proof and ProofFile
 #[derive(Serialize, Deserialize, Debug)]
 struct Proof {
     a: Vec<String>,
@@ -29,10 +31,11 @@ struct ProofFile {
     proof: Proof,
     inputs: Vec<String>,
 }
-
+// Entry point of the program
 fn main() -> io::Result<()> {
+    // Generating a zokrates program file if it doesn't exist
     generate_zok_file()?;
-
+    // Running zokrates commands for compilation, setup, and verifier export
     run_command("zokrates", &["compile", "-i", "whitelist.zok"])?;
     run_command("zokrates", &["setup"])?;
     run_command("zokrates", &["export-verifier"])?;
@@ -66,6 +69,13 @@ fn main() -> io::Result<()> {
     Ok(())
 }
 
+/*
+* Function to generate a zokrates program file if it doesn't already exist.
+* The program, even tha is simple it contains a public part, a private part and assertion.
+* The a and b should be the decimal representation of an ethereum address split in two.
+* The c and d are again the same values so that we can have them as inputs in solidity and handle them there also.
+* The assertion is just a simple assertion so that the verifier can revert on fault proofs.
+*/
 fn generate_zok_file() -> io::Result<()> {
     if !Path::new("whitelist.zok").exists() {
         let contents = r#"
@@ -80,6 +90,7 @@ def main(private field a, private field b, public field c, public field d) -> bo
     Ok(())
 }
 
+// Function to run a shell command with given arguments
 fn run_command(command: &str, args: &[&str]) -> io::Result<()> {
     let output = Command::new(command).args(args).output()?;
     if !output.status.success() {
@@ -89,6 +100,7 @@ fn run_command(command: &str, args: &[&str]) -> io::Result<()> {
     Ok(())
 }
 
+// Function to parse proof and input from proof.json file that ZoKrates produces
 fn parse_proof_and_input() -> Result<(Proof, Vec<String>), Box<dyn Error>> {
     // Open the proof.json file
     let file = File::open("proof.json")?;
@@ -100,19 +112,38 @@ fn parse_proof_and_input() -> Result<(Proof, Vec<String>), Box<dyn Error>> {
     Ok((proof_file.proof, proof_file.inputs))
 }
 
+// Function to remove leading zeros from a string
 fn remove_leading_zeros(s: &str) -> &str {
     s.trim_start_matches('0')
 }
 
+/// Function to process each address, generate a proof using zokrates, and populate the hashmap with proofs and inputs.
+///
+/// # Arguments
+///
+/// * `address` - A String representing an Ethereum address.
+/// * `all_data` - A mutable reference to a HashMap for storing the proofs and inputs.
+///
+/// # Returns
+///
+/// * A Result indicating successful execution or an error.
 fn process_addresses(
     address: String,
     all_data: &mut HashMap<String, serde_json::Value>,
 ) -> Result<(), io::Error> {
+    // Convert the hexadecimal address to a decimal BigUint
     let decimal = BigUint::from_str_radix(&address[2..], 16).unwrap();
     let decimal_str = decimal.to_string();
+    
+    // Find the midpoint of the decimal string
     let mid = decimal_str.len() / 2;
+    
+    // Split the decimal string into two halves and duplicate them
     let (a, b) = decimal_str.split_at(mid);
     let (c, d) = (a.to_string(), b.to_string());
+
+    // Run zokrates command to compute a witness with the split values as arguments
+    // Note: the leading zeros are remove cause they are not accepted as compute-witness args
     run_command(
         "zokrates",
         &[
@@ -124,7 +155,11 @@ fn process_addresses(
             &remove_leading_zeros(&d.to_string()),
         ],
     )?;
+
+    // Run zokrates command to generate a proof
     run_command("zokrates", &["generate-proof"])?;
+
+    // Parse the generated proof and inputs
     Ok(match parse_proof_and_input() {
         Ok((proof, input)) => {
             all_data.insert(
