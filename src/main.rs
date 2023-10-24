@@ -221,4 +221,12 @@ mod tests {
         let result = remove_leading_zeros(input);
         assert_eq!(result, "123456");
     }
+
+    #[test]
+    fn test_run_command() {
+        let result = run_command("echo", &["Hello, world!"]);
+        assert!(result.is_ok());
+        let output = result.unwrap();
+        assert_eq!(String::from_utf8_lossy(&output.stdout), "Hello, world!\n");
+    }
 }
