@@ -30,6 +30,42 @@ struct ProofFile {
     inputs: Vec<String>,
 }
 
+fn main() -> io::Result<()> {
+    generate_zok_file()?;
+
+    run_command("zokrates", &["compile", "-i", "whitelist.zok"])?;
+    run_command("zokrates", &["setup"])?;
+    run_command("zokrates", &["export-verifier"])?;
+
+    // Open the addresses.txt file
+    let file = File::open("addresses.txt")?;
+    let reader = io::BufReader::new(file);
+
+    // Create a hashmap to hold all the data
+    let mut all_data: HashMap<String, serde_json::Value> = HashMap::new();
+
+    // Loop through each line in addresses.txt
+    for line in reader.lines() {
+        let address = line?;
+        process_addresses(address, &mut all_data)?;
+    }
+
+    // Open the address-proof.json file for writing
+    let file = OpenOptions::new()
+        .write(true)
+        .create(true)
+        .open("address-proof.json")?;
+    let mut writer = io::BufWriter::new(file);
+
+    // Serialize the hashmap to a formatted JSON string
+    let json_string = serde_json::to_string_pretty(&all_data)?;
+
+    // Write the JSON string to the file
+    writer.write_all(json_string.as_bytes())?;
+
+    Ok(())
+}
+
 fn generate_zok_file() -> io::Result<()> {
     if !Path::new("whitelist.zok").exists() {
         let contents = r#"
@@ -45,9 +81,7 @@ def main(private field a, private field b, public field c, public field d) -> bo
 }
 
 fn run_command(command: &str, args: &[&str]) -> io::Result<()> {
-    let output = Command::new(command)
-        .args(args)
-        .output()?;
+    let output = Command::new(command).args(args).output()?;
     if !output.status.success() {
         let args_str = args.join(" ");
         eprintln!("Command '{}' with arguments '{}' failed", command, args_str);
@@ -107,40 +141,4 @@ fn process_addresses(
         }
         Err(e) => eprintln!("Failed to parse proof and input: {}", e),
     })
-}
-
-fn main() -> io::Result<()> {
-    generate_zok_file()?;
-
-    run_command("zokrates", &["compile", "-i", "whitelist.zok"])?;
-    run_command("zokrates", &["setup"])?;
-    run_command("zokrates", &["export-verifier"])?;
-
-    // Open the addresses.txt file
-    let file = File::open("addresses.txt")?;
-    let reader = io::BufReader::new(file);
-
-    // Create a hashmap to hold all the data
-    let mut all_data: HashMap<String, serde_json::Value> = HashMap::new();
-
-    // Loop through each line in addresses.txt
-    for line in reader.lines() {
-        let address = line?;
-        process_addresses(address, &mut all_data)?;
-    }
-
-    // Open the address-proof.json file for writing
-    let file = OpenOptions::new()
-        .write(true)
-        .create(true)
-        .open("address-proof.json")?;
-    let mut writer = io::BufWriter::new(file);
-
-    // Serialize the hashmap to a formatted JSON string
-    let json_string = serde_json::to_string_pretty(&all_data)?;
-
-    // Write the JSON string to the file
-    writer.write_all(json_string.as_bytes())?;
-
-    Ok(())
 }
