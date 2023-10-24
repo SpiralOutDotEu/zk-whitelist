@@ -214,4 +214,11 @@ mod tests {
         assert_eq!(proof.c, vec!["0x7", "0x8"]);
         assert_eq!(inputs, vec!["0x9", "0xA"]);
     }
+
+    #[test]
+    fn test_remove_leading_zeros() {
+        let input = "000123456";
+        let result = remove_leading_zeros(input);
+        assert_eq!(result, "123456");
+    }
 }
